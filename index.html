@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Shop - Pro</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eceff1; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .admin-box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        table { width: 100%; max-width: 800px; margin-top: 20px; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        .btn-del { background: #ff4d4d; padding: 6px 12px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="admin-box">
+    <h2>Thêm Sản Phẩm</h2>
+    <input type="text" id="n" placeholder="Tên sản phẩm">
+    <input type="number" id="p" placeholder="Giá tiền">
+    <input type="text" id="l" placeholder="Link Zalo/FB">
+    <select id="c">
+        <option value="Đỏ">Màu Đỏ</option>
+        <option value="Xanh">Màu Xanh</option>
+        <option value="Đen">Màu Đen</option>
+        <option value="Trắng">Màu Trắng</option>
+    </select>
+    <p style="font-size: 13px; color: #666;">Chọn ảnh từ máy:</p>
+    <input type="file" id="fileInput" accept="image/*">
+    <button onclick="uploadAndSave()" id="btnSave">LƯU SẢN PHẨM</button>
+</div>
+
+<table>
+    <thead><tr><th>Ảnh</th><th>Tên</th><th>Màu</th><th>Xóa</th></tr></thead>
+    <tbody id="adminBody"></tbody>
+</table>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "CỦA_BẠN",
+        authDomain: "CỦA_BẠN",
+        databaseURL: "https://vuxuanhuy-default-rtdb.firebaseio.com",
+        projectId: "vuxuanhuy",
+        storageBucket: "vuxuanhuy.appspot.com",
+        messagingSenderId: "CỦA_BẠN",
+        appId: "CỦA_BẠN"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const storage = firebase.storage();
+
+    async function uploadAndSave() {
+        const file = document.getElementById('fileInput').files[0];
+        const btn = document.getElementById('btnSave');
+        if(!file) return alert("Hãy chọn ảnh!");
+        
+        btn.disabled = true; btn.innerText = "Đang tải lên...";
+
+        // 1. Tải ảnh lên Storage
+        const storageRef = storage.ref('images/' + file.name);
+        await storageRef.put(file);
+        const imgUrl = await storageRef.getDownloadURL();
+
+        // 2. Lưu thông tin vào Database
+        const data = {
+            name: document.getElementById('n').value,
+            price: document.getElementById('p').value,
+            link: document.getElementById('l').value,
+            color: document.getElementById('c').value,
+            img: imgUrl
+        };
+        
+        db.ref('products').push(data);
+        alert("Thành công!");
+        location.reload();
+    }
+
+    db.ref('products').on('value', (snap) => {
+        const tbody = document.getElementById('adminBody');
+        tbody.innerHTML = '';
+        snap.forEach((item) => {
+            const p = item.val();
+            tbody.innerHTML += `<tr>
+                <td><img src="${p.img}" width="50"></td>
+                <td>${p.name}</td>
+                <td>${p.color}</td>
+                <td><button class="btn-del" onclick="del('${item.key}')">XÓA</button></td>
+            </tr>`;
+        });
+    });
+
+    function del(id) { if(confirm("Xóa?")) db.ref('products/' + id).remove(); }
+</script>
+</body>
+</html>
